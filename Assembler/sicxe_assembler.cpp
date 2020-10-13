@@ -25,7 +25,6 @@ OPTAB optab[] = {
 };
 
 const int op_cnt = (int)(sizeof(optab)/sizeof(optab[0]));
-bool is_opcode(char *);
 
 typedef struct{
     char name[10];
@@ -45,6 +44,10 @@ typedef struct{
 }INPUT;
 
 INPUT input[MAX_LINE_LENGTH];
+
+
+bool is_opcode(char *);
+bool write_imediate();
 
 int main(int argc, char** argv)
 {
@@ -172,7 +175,7 @@ int main(int argc, char** argv)
         } 
         else{
             // fputs("invalid operation code", w_file);
-            // return EXIT_FAILURE;
+            return EXIT_FAILURE;
         }
         i++;
     }while(strcmp(input[i].opcode, "END") != 0);
@@ -182,11 +185,14 @@ int main(int argc, char** argv)
         perror(r_path);
     }
 
+    if(write_imediate() == false){
+        printf("Fail!\n");
+        return EXIT_FAILURE;
+    }
     ////////////////////////////////////////
     //          Finish Pass1                
     ////////////////////////////////////////
 
-    
     // printf("line count is %d\n",line_count);
     // printf("%s", input[line_count-1].opcode);
 
@@ -206,9 +212,8 @@ int main(int argc, char** argv)
     */
 }
 
-
-
-bool is_opcode(char* str){
+bool is_opcode(char* str)
+{
     bool result = false;
     if(str[0] == '+'){
         char temp[10];
@@ -230,4 +235,57 @@ bool is_opcode(char* str){
         }
     }
     return result;
+}
+
+bool write_imediate()
+{
+    FILE *fp = fopen("Intermediate","w");
+
+    if(!fp)
+        return false;
+
+    //char szHex[16];
+    fputs(".\tcode\n",fp);
+
+    for(int i=1;i<line_count;i++){
+        char result[100];
+        sprintf(result, "%d", input[i].loc);
+        strcat(result,"\t");
+        strcat(result, input[i].symbol);
+        strcat(result,"\t");
+        strcat(result, input[i].opcode);
+        strcat(result,"\t");
+        strcat(result, input[i].operand);
+        strcat(result,"\n");
+
+        fputs(result,fp);
+
+        //printf("%s",result);
+
+        //printf("%d\t%s\t%s\t%s \n",input[i].loc, input[i].symbol, input[i].opcode, input[i].operand);
+        /* 10 -> 16 
+        sprintf(szHex, "%X", input[i].loc);
+        printf("%s\t%s\t%s\t%s \n",szHex, input[i].symbol, input[i].opcode, input[i].operand);
+        */
+    }
+
+    fputs("\n.\tSYMTAB\n",fp);
+
+    for(int i=0;i<sym_cnt;i++){
+        char result[100];
+        strcpy(result, symtab[i].name);
+        char temp[10];
+        strcat(result,"\t");
+        sprintf(temp, "%d", symtab[i].value);
+        strcat(result, temp);
+        strcat(result,"\n");
+        //symtab[sym_cnt]
+        fputs(result,fp);
+    }
+
+
+     if(fclose(fp))
+        return false;
+
+    return true;
 }
