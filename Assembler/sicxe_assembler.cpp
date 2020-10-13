@@ -47,6 +47,7 @@ INPUT input[MAX_LINE_LENGTH];
 
 
 bool is_opcode(char *);
+bool is_opcode2(char* ,int*);
 bool write_imediate();
 
 int main(int argc, char** argv)
@@ -70,7 +71,7 @@ int main(int argc, char** argv)
 
     char delimit[] = " \t\n";
     char *token;
-	char temp1[10], temp2[10], temp3[10];
+	char temp1[10], temp2[10], temp3[10], temp4[10];
 	int tok_num;
 
     // Get each line until there are none left
@@ -144,7 +145,7 @@ int main(int argc, char** argv)
         input[i].loc = LOCCTR;
 
         if(is_opcode(input[i].opcode) == true){
-            if(format==1){
+            if(format == 1){
                 LOCCTR += 1;
             }else if(format==2){
                 LOCCTR += 2;
@@ -210,6 +211,135 @@ int main(int argc, char** argv)
         perror(w_path);
     }
     */
+
+
+    ////////////////////////////////////////
+    //          Start Pass2                
+    ////////////////////////////////////////
+    printf("Start Pass2\n");
+
+    int SYMTAB_size;
+    int line_cnt;
+
+    FILE *fp = fopen("Intermediate","r");
+
+    if(!fp){
+        return EXIT_FAILURE;
+    }
+
+    fgets(line, 50, fp);
+    token = strtok(line, delimit);
+    SYMTAB_size = atoi(token);
+    printf("SYM:%d\n",SYMTAB_size);
+    SYMTAB st[SYMTAB_size];
+
+    for(int j=0;j<SYMTAB_size;j++){
+        fgets(line, 50, fp);
+        token = strtok(line, delimit);
+        strcpy(st[j].name, token);
+        token = strtok(NULL, delimit);
+        st[j].value = atoi(token);
+    }
+
+    fgets(line, 50, fp);
+    token = strtok(line, delimit);
+    line_cnt = atoi(token);
+
+    printf("line_cnt : %d\n",line_cnt);
+    
+
+    fgets(line, 50, fp);
+    token = strtok(line, delimit);
+    token = strtok(NULL, delimit);
+
+    if(strcmp(token,"START")==0){
+    
+    }else{
+        return EXIT_FAILURE;
+    }
+
+    while(fgets(line, 50, fp)){
+        tok_num = 0;
+        token = strtok(line, delimit);
+
+        int t_loc;
+        char t_symbol[10];
+        char t_opcode[10];
+        char t_operand[10];
+
+        while(token != NULL){
+			tok_num++;
+			if(tok_num == 1) {
+				strcpy(temp1, token);
+			} else if(tok_num == 2) {
+				strcpy(temp2, token);
+			} else if(tok_num == 3){
+				strcpy(temp3, token);
+			}else{
+                strcpy(temp4, token);
+            }
+			token = strtok(NULL, delimit);
+		}
+
+        if(tok_num == 2){
+            strcpy(t_opcode, temp1);
+            t_loc = atoi(temp2);
+            //printf("%s\t%d\n",t_opcode,t_loc);
+        }else if(tok_num == 3){
+            strcpy(t_opcode, temp1);
+            strcpy(t_operand, temp2);
+            t_loc = atoi(temp3);
+            //printf("%s\t%s\t%d\n",t_opcode,t_operand,t_loc);
+
+            if(strcmp(t_opcode,"END")==0){
+                printf("The End!!!\n");
+            }
+
+        }else{
+            strcpy(t_symbol, temp1);
+            strcpy(t_opcode, temp2);
+            strcpy(t_operand, temp3);
+            t_loc = atoi(temp4);
+            //printf("%s\t%s\t%s\t%d\n",t_symbol,t_opcode,t_operand,t_loc);
+        }
+
+        int opcode=0;
+        int addr;
+
+        if(is_opcode2(t_opcode, &opcode) == true){
+            if(tok_num == 3 || tok_num == 4){
+                // Exist operand
+                for(int j=0;j<SYMTAB_size;j++){
+                    if(strcmp(st[j].name, t_operand) == 0){
+                        addr = st[j].value;
+                        break;
+                    }
+                }
+            }else{
+                addr = 0;
+            }
+        }else if(strcmp(t_opcode,"BYTE")==0 || strcmp(t_opcode,"WORD")==0){
+
+        }else if(strcmp(t_opcode,"BASE")==0){
+
+        }
+
+
+        // for simple, PC-relative
+        opcode += 3;
+
+        printf("16 : %X\n",opcode);
+
+
+
+    }
+
+
+//     if(fclose(fp)){
+//         return EXIT_FAILURE;
+//     }
+
+
 }
 
 bool is_opcode(char* str)
@@ -236,28 +366,73 @@ bool is_opcode(char* str)
     }
     return result;
 }
-
+bool is_opcode2(char* str, int* opcode)
+{
+    bool result = false;
+    if(str[0] == '+'){
+        char temp[10];
+        strcpy(temp, str+1);
+        for(int i=0;i < op_cnt;i++){
+            if(strcmp(optab[i].inst, temp) == 0){
+                result = true;
+                format=4;
+                *opcode = optab[i].opcode;
+                break;
+            }
+        }
+    }else{
+        for(int i=0;i<op_cnt;i++){
+            if(strcmp(optab[i].inst, str) == 0){
+                result = true;
+                *opcode = optab[i].opcode;
+                format = optab[i].format;
+                break;
+            }
+        }
+    }
+    return result;
+}
 bool write_imediate()
 {
+    char result[100];
+    char temp[10];
     FILE *fp = fopen("Intermediate","w");
 
     if(!fp)
         return false;
 
+    sprintf(temp, "%d", sym_cnt);
+    strcat(temp, "\n");
+    fputs(temp, fp);
+
+    for(int i=0;i<sym_cnt;i++){
+        strcpy(result, symtab[i].name);
+        strcat(result,"\t");
+        sprintf(temp, "%d", symtab[i].value);
+        strcat(result, temp);
+        strcat(result,"\n");
+        //symtab[sym_cnt]
+        fputs(result,fp);
+    }
+
     //char szHex[16];
-    fputs(".\tcode\n",fp);
+
+    sprintf(temp, "%d", line_count);
+    strcat(temp, "\n");
+    fputs(temp, fp);
+
 
     for(int i=1;i<line_count;i++){
-        char result[100];
-        sprintf(result, "%d", input[i].loc);
-        strcat(result,"\t");
+        strcpy(result,"");
         strcat(result, input[i].symbol);
         strcat(result,"\t");
         strcat(result, input[i].opcode);
         strcat(result,"\t");
         strcat(result, input[i].operand);
+        strcat(result,"\t");
+        sprintf(temp, "%d", input[i].loc);
+        strcat(result,temp);
         strcat(result,"\n");
-
         fputs(result,fp);
 
         //printf("%s",result);
@@ -268,21 +443,6 @@ bool write_imediate()
         printf("%s\t%s\t%s\t%s \n",szHex, input[i].symbol, input[i].opcode, input[i].operand);
         */
     }
-
-    fputs("\n.\tSYMTAB\n",fp);
-
-    for(int i=0;i<sym_cnt;i++){
-        char result[100];
-        strcpy(result, symtab[i].name);
-        char temp[10];
-        strcat(result,"\t");
-        sprintf(temp, "%d", symtab[i].value);
-        strcat(result, temp);
-        strcat(result,"\n");
-        //symtab[sym_cnt]
-        fputs(result,fp);
-    }
-
 
      if(fclose(fp))
         return false;
