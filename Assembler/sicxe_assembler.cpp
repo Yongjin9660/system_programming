@@ -35,7 +35,7 @@ typedef struct{
 SYMTAB symtab[MAX_LINE_LENGTH];
 int sym_cnt = 0;
 int format;
-
+unsigned int line_count = 1;
 
 typedef struct{
     int loc;
@@ -49,28 +49,19 @@ INPUT input[MAX_LINE_LENGTH];
 int main(int argc, char** argv)
 {
     char *r_path;
-    char *w_path;
     char line[MAX_LINE_LENGTH];
-    unsigned int line_count = 1;
 
     if(argc < 1)
         return EXIT_FAILURE;
 
     r_path = argv[1];
-    w_path = argv[2];
 
     /* Open file */
     FILE *r_file = fopen(r_path, "r");
-    FILE *w_file = fopen(w_path, "w");
 
     if(!r_file)
     {
         perror(r_path);
-        return EXIT_FAILURE;
-    }
-    if(!w_file)
-    {
-        perror(w_path);
         return EXIT_FAILURE;
     }
 
@@ -78,6 +69,7 @@ int main(int argc, char** argv)
     char *token;
 	char temp1[10], temp2[10], temp3[10];
 	int tok_num;
+
     // Get each line until there are none left
     while(fgets(line, 50, r_file))
     {
@@ -135,25 +127,18 @@ int main(int argc, char** argv)
                     break;
                 }
             }
-
             if(chk_sym == true){
                 strcpy(symtab[sym_cnt].name, input[i].symbol);
                 symtab[sym_cnt].value = LOCCTR;
-
-                printf("symtab[%d].name : %s   value : %d\n",sym_cnt, symtab[sym_cnt].name, symtab[sym_cnt].value);
-
+                //printf("symtab[%d].name : %s   value : %d\n",sym_cnt, symtab[sym_cnt].name, symtab[sym_cnt].value);
                 sym_cnt++;
-                
-
-
             }else{
-                fputs("duplicate symbol", w_file);
+                //fputs("duplicate symbol", w_file);
                 return EXIT_FAILURE;
             }
         }
 
         input[i].loc = LOCCTR;
-
 
         if(is_opcode(input[i].opcode) == true){
             if(format==1){
@@ -182,23 +167,43 @@ int main(int argc, char** argv)
                 LOCCTR+=1;
             }
         }
+        else if(strcmp(input[i].opcode, "BASE") == 0){
+
+        } 
         else{
             // fputs("invalid operation code", w_file);
             // return EXIT_FAILURE;
         }
-
         i++;
     }while(strcmp(input[i].opcode, "END") != 0);
-
 
     if(fclose(r_file)){
         return EXIT_FAILURE;
         perror(r_path);
     }
+
+    ////////////////////////////////////////
+    //          Finish Pass1                
+    ////////////////////////////////////////
+
+    
+    // printf("line count is %d\n",line_count);
+    // printf("%s", input[line_count-1].opcode);
+
+    /*
+    char *w_path;
+    w_path = argv[2];
+    FILE *w_file = fopen(w_path, "w");
+    if(!w_file)
+    {
+        perror(w_path);
+        return EXIT_FAILURE;
+    }
     if(fclose(w_file)){
         return EXIT_FAILURE;
         perror(w_path);
     }
+    */
 }
 
 
