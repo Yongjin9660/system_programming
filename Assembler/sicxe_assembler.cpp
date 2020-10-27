@@ -574,23 +574,29 @@ int main(int argc, char** argv)
                                     char s[10];
                                     sprintf(s, "%X", addr);
 
+                                    //char *temp_addr = substring(s, 0, comma_position - 1);
+
+
                                     int len = strlen(s) - 3;
+                                    
                                     char* op = toHex(opcode, 2);
                                     char* xb = toHex(xbpe,1);
-                                    char disp[3];
+                                    char *temp_addr = substring(s, 5, strlen(s) - 1);
+                                    //char disp[3];
                                     
-                                    for (int i = 0; i < 3; i++)
-                                    {
-                                        fprintf(fp_Assembly, "%c", s[len]);
-                                        disp[i] = s[len];
-                                        len++;
-                                    }
+                                    // for (int i = 0; i < 3; i++)
+                                    // {
+                                    //     fprintf(fp_Assembly, "%c", s[len]);
+                                    //     disp[i] = s[len];
+                                    //     len++;
+                                    // }
                                     char temp[6] = "";
                                     strcat(temp, op);
                                     strcat(temp, xb);
-                                    strcat(temp,disp);
+                                    strcat(temp, temp_addr);
                                     strcpy(object_code[object_cnt], temp);
-                                    arr_loc[object_cnt++] = t_loc;
+                                    arr_loc[object_cnt] = t_loc;
+                                    object_cnt++;
                                     fprintf(fp_Assembly, "\n");
                                     print = true;
                                 }
@@ -623,27 +629,36 @@ int main(int argc, char** argv)
                                         fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X",t_loc, t_symbol,t_opcode, t_operand,opcode,xbpe);
 
                                         char s[10];
-                                        sprintf(s,"%X",addr);
+                                        sprintf(s, "%X", addr);
 
+                                        //printf("This is : %s\n",s);
+                                        //printf("len : %d\n",(int)strlen(s));
                                         int len = strlen(s) - 3;
 
                                         char *op = toHex(opcode, 2);
                                         char *xb = toHex(xbpe, 1);
                                         char disp[3];
 
-                                        for (int i = 0; i < 3; i++)
-                                        {
-                                            fprintf(fp_Assembly, "%c", s[len]);
-                                            disp[i] = s[len];
-                                            len++;
-                                        }
+                                        char *temp_addr = substring(s, 5, strlen(s) - 1);
+                                        //printf("temp : %s\n",temp_addr);
+
+                                        // for (int i = 0; i < 3; i++)
+                                        // {
+                                        //     fprintf(fp_Assembly, "%c", s[len]);
+                                        //     disp[i] = s[len];
+                                        //     len++;
+                                        // }
                                         fprintf(fp_Assembly, "\n");
                                         print = true;
-
-                                        char temp[6] = "";
+                                        ////
+                                        //printf("%s\n",disp);
+                                        char temp[6];
+                                        strcpy(temp,"");
                                         strcat(temp, op);
                                         strcat(temp, xb);
-                                        strcat(temp, disp);
+                                        //strcat(temp, disp);
+                                        strcat(temp, temp_addr);
+                                        //printf("%s\n",temp);
                                         strcpy(object_code[object_cnt], temp);
                                         arr_loc[object_cnt] = t_loc;
                                         object_cnt++;
@@ -753,7 +768,8 @@ int main(int argc, char** argv)
                 char *op = toHex(opcode, 2);
                 char *xb = toHex(xbpe, 1);
                 char *disp = toHex(addr, 5);
-                char temp[8] = "";
+                char temp[8];
+                strcpy(temp, "");
                 strcat(temp, op);
                 strcat(temp, xb);
                 strcat(temp, disp);
@@ -780,7 +796,10 @@ int main(int argc, char** argv)
                 char* op = toHex(opcode, 2);
                 char* xb = toHex(xbpe, 1);
                 char* disp = toHex(addr, 3);
-                char temp[6] = "";
+
+                //printf("%d\n",object_cnt);
+
+                char temp[8];
                 strcpy(temp, "");
                 strcpy(temp, op);
                 strcat(temp, xb);
@@ -788,6 +807,7 @@ int main(int argc, char** argv)
                 strcpy(object_code[object_cnt], temp);
                 arr_loc[object_cnt] = t_loc;
                 object_cnt++;
+               
             }
         }
     }
@@ -797,10 +817,10 @@ int main(int argc, char** argv)
 
     fprintf(F_object, "%06X\n", program_length);
     
-    for(int i=0;i<object_cnt;i++)
-    {
-        printf("%4X \t  %s\n",arr_loc[i],object_code[i]);
-    }
+    // for(int i=0;i<object_cnt;i++)
+    // {
+    //     printf("%4X \t  %s\n",arr_loc[i], object_code[i]);
+    // }
     
     int cnt=0;
     int First_addr = arr_loc[0];
