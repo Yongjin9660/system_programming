@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
-#define MAX_LINE_LENGTH 100
+#define MAX_LINE_LENGTH 500
 #define OP_SIZE 100
 
 typedef struct {
@@ -34,6 +35,8 @@ typedef struct{
 }SYMTAB;
 
 SYMTAB symtab[MAX_LINE_LENGTH];
+SYMTAB* hash_symtab[MAX_LINE_LENGTH];
+
 int sym_cnt = 0;
 int format;
 unsigned int line_count = 1;
@@ -65,20 +68,35 @@ OPTAB *createOP(const char *inst, int opcode, int format)
     optab->format = format;
     return optab;
 }
+SYMTAB *createSYM(const char *name, int value)
+{
+    SYMTAB *s = (SYMTAB *)malloc(sizeof(SYMTAB));
+    strcpy(s->name, name);
+    s->value = value;
+    return s;
+}
 
 int hashcode(char *key)
 {
-    //printf("%d\n", (int)strlen(key));
     int hash = 0;
 
     for (int i = 0; i < strlen(key); i++)
     {
         hash += key[i];
     }
-    //printf("hash : %d\n",hash);
     return hash % OP_SIZE;
 }
 
+int hashcode_SYM(char *key)
+{
+    int hash = 0;
+
+    for (int i = 0; i < strlen(key); i++)
+    {
+        hash += key[i];
+    }
+    return hash % MAX_LINE_LENGTH;
+}
 
 OPTAB *get(const char *inst)
 {
@@ -92,6 +110,24 @@ OPTAB *get(const char *inst)
             return NULL;
 
         if (strcmp(o->inst, inst) == 0)
+            return o;
+
+        idx++;
+    } while (1);
+}
+
+SYMTAB *get_SYM(const char *name)
+{
+    char key[20] = "";
+    strcpy(key, name);
+    int idx = hashcode_SYM(key);
+    do
+    {
+        SYMTAB *o = hash_symtab[idx];
+        if (o == NULL)
+            return NULL;
+
+        if (strcmp(o->name, name) == 0)
             return o;
 
         idx++;
@@ -115,19 +151,28 @@ void insert(OPTAB* op)
         }
         idx++;
     } while (1);
-    
 }
-
-void printOPTAB()
+bool insert_SYM(SYMTAB *sy)
 {
-    printf("\n optable ====================\n");
-    for(int i=0 ; i<OP_SIZE ; i++)
+    char *key = sy->name;
+    int idx = hashcode_SYM(key);
+    bool result;
+    do
     {
-        OPTAB* o = hash_optab[i];
-        if(o == NULL) 
-            continue;
-        printf("%d\t%s\t%.2X\t%d\n",i ,o->inst, o->opcode, o->format);
-    }
+        if (hash_symtab[idx] == NULL)
+        {
+            hash_symtab[idx] = sy;
+            result = true;
+            break;
+        }
+        else if (strcmp(hash_symtab[idx]->name, sy->name) == 0)
+        {
+            result = false;
+            break;
+        }
+        idx++;
+    } while (1);
+    return result;
 }
 
 void MakeOptable()
@@ -202,6 +247,7 @@ int main(int argc, char** argv)
     char *isHash;
     char line[100];
     
+    clock_t t_start = clock();
 
     if(argc < 1)
         return EXIT_FAILURE;
@@ -322,23 +368,29 @@ int main(int argc, char** argv)
             continue;
         }
         bool chk_sym = true;
-        
+    
         if ((int)strlen(input[i].symbol) != 0)
         {
             chk_sym = findSymbol(input[i].symbol);
-            // for (int j = 0; j < sym_cnt; j++)
-            // {
-            //     if (strcmp(input[i].symbol, symtab[j].name) == 0)
-            //     {
-            //         chk_sym = false;
-            //         break;
-            //     }
-            // }
             if (chk_sym == true)
             {
-                strcpy(symtab[sym_cnt].name, input[i].symbol);
-                symtab[sym_cnt].value = LOCCTR;
-                sym_cnt++;
+                if (_UseHash == true)
+                {
+                    bool rightSym = insert_SYM(createSYM(input[i].symbol, LOCCTR));
+                    if (!rightSym)
+                    {
+                        fputs("duplicate symbol", fp_Assembly);
+                        return EXIT_FAILURE;
+                    }
+                    else
+                        sym_cnt++;
+                }
+                else
+                {
+                    strcpy(symtab[sym_cnt].name, input[i].symbol);
+                    symtab[sym_cnt].value = LOCCTR;
+                    sym_cnt++;
+                }
             }
             else
             {
@@ -346,7 +398,7 @@ int main(int argc, char** argv)
                 return EXIT_FAILURE;
             }
         }
-
+        
         input[i].loc = LOCCTR;
         
         if (is_opcode(input[i].opcode) == true)
@@ -386,32 +438,80 @@ int main(int argc, char** argv)
     } while (strcmp(input[i].opcode, "END") != 0);
 
 
-
-
     // write symbol table in Intermediate file
-    char c_sym_cnt[10];
-
-    sprintf(c_sym_cnt, "%d", sym_cnt);
-    strcat(c_sym_cnt, "\n");
-    fputs(c_sym_cnt, wfp);
-    for (int j = 0; j < sym_cnt; j++)
+    if (_UseHash == true)
     {
-        fprintf(wfp, "%s\t%d\n", symtab[j].name, symtab[j].value);
-    }
-
-    for (int j = 1; j < line_count - 1; j++)
-    {
-        if(input[j].comment == NULL)
+        char c_sym_cnt[10];
+        sprintf(c_sym_cnt, "%d", sym_cnt);
+        strcat(c_sym_cnt, "\n");
+        fputs(c_sym_cnt, wfp);
+        int cnt = 0;
+        for (int i = 0; i < MAX_LINE_LENGTH; i++)
         {
-            if(strcmp(input[j].opcode, "BASE") == 0)
-                fprintf(wfp, "\t\t%s\t%s\n",input[j].opcode, input[j].operand);
+            SYMTAB *s = hash_symtab[i];
+            if (s == NULL)
+                continue;
+            cnt++;
+            fprintf(wfp, "%s\t%d\n", s->name, s->value);
+            if (cnt == sym_cnt + 1)
+                break;
+        }
+        for (int j = 1; j < line_count - 1; j++)
+        {
+            if (input[j].comment == NULL)
+            {
+                if (strcmp(input[j].opcode, "BASE") == 0)
+                    fprintf(wfp, "\t\t%s\t%s\n", input[j].opcode, input[j].operand);
+                else
+                    fprintf(wfp, "%d\t%s\t%s\t%s\n", input[j].loc, input[j].symbol, input[j].opcode, input[j].operand);
+            }
             else
-                fprintf(wfp, "%d\t%s\t%s\t%s\n", input[j].loc, input[j].symbol, input[j].opcode, input[j].operand);
-        }        
-        else
-            fprintf(wfp ,"%s", input[j].comment);
+                fprintf(wfp, "%s", input[j].comment);
+        }
+        fprintf(wfp, "\t%s\t%s\t%s\n", input[line_count - 1].symbol, input[line_count - 1].opcode, input[line_count - 1].operand);
+
+        clock_t t_end = clock();
+
+        fputs("\n========= optable ============\n", wfp);
+        fputs("index \tkey \topcode \tformat\n", wfp);
+        for (int i = 0; i < OP_SIZE; i++)
+        {
+            OPTAB *o = hash_optab[i];
+            if (o == NULL)
+                continue;
+            fprintf(wfp, "%d \t%s \t%.2X \t%d\n", i, o->inst, o->opcode, o->format);
+        }
+        fprintf(wfp, "\nEstimated Time(Using Hash Table) : %lf\n", (double)(t_end - t_start)/CLOCKS_PER_SEC);
     }
-    fprintf(wfp, "\t%s\t%s\t%s\n", input[line_count - 1].symbol, input[line_count - 1].opcode, input[line_count - 1].operand);
+    else
+    {
+        char c_sym_cnt[10];
+
+        sprintf(c_sym_cnt, "%d", sym_cnt);
+        strcat(c_sym_cnt, "\n");
+        fputs(c_sym_cnt, wfp);
+        for (int j = 0; j < sym_cnt; j++)
+        {
+            fprintf(wfp, "%s\t%d\n", symtab[j].name, symtab[j].value);
+        }
+
+        for (int j = 1; j < line_count - 1; j++)
+        {
+            if (input[j].comment == NULL)
+            {
+                if (strcmp(input[j].opcode, "BASE") == 0)
+                    fprintf(wfp, "\t\t%s\t%s\n", input[j].opcode, input[j].operand);
+                else
+                    fprintf(wfp, "%d\t%s\t%s\t%s\n", input[j].loc, input[j].symbol, input[j].opcode, input[j].operand);
+            }
+            else
+                fprintf(wfp, "%s", input[j].comment);
+        }
+        fprintf(wfp, "\t%s\t%s\t%s\n", input[line_count - 1].symbol, input[line_count - 1].opcode, input[line_count - 1].operand);
+
+        clock_t t_end = clock();
+        fprintf(wfp, "\nEstimated Time : %lf\n", (double)(t_end - t_start)/CLOCKS_PER_SEC);
+    }
 
     fclose(r_file);
     fclose(wfp);
@@ -1019,7 +1119,7 @@ bool is_opcode(char *str)
             else
             {
                 result = true;
-                format = opt->format;
+                format = 4;
             }
         }
         else
@@ -1098,7 +1198,11 @@ bool findSymbol(char* input)
     bool result = true;
     if(_UseHash == true)
     {
-
+        SYMTAB *sym = get_SYM(input);
+        if(sym == NULL)
+            result = true;
+        else
+            result = false;
     }
     else
     {
