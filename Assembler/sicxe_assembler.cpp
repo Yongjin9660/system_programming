@@ -3,6 +3,7 @@
 #include <string.h>
 
 #define MAX_LINE_LENGTH 100
+#define OP_SIZE 100
 
 typedef struct {
     char inst[10];
@@ -23,6 +24,7 @@ OPTAB optab[] = {
 
     {"SUBR",0x94,2}, {"SVC",0xB0,2}, {"TD",0xE0,3}, {"TIO",0xF8,1}, {"TIX",0x2C,3}, {"TIXR",0xB8,2}, {"WD",0xDC,3} 
 };
+OPTAB* hash_optab[OP_SIZE];
 
 const int op_cnt = (int)(sizeof(optab)/sizeof(optab[0]));
 
@@ -48,22 +50,165 @@ INPUT input[MAX_LINE_LENGTH];
 
 bool is_opcode(char *);
 bool is_opcode2(char* , int*);
+bool findSymbol(char*);
 unsigned int getRegisterNum(char);
 char* substring(char*, int, int);
 char* toHex(int, int);
 char *toHex_Original(int);
 
+
+OPTAB *createOP(const char *inst, int opcode, int format)
+{
+    OPTAB *optab = (OPTAB *)malloc(sizeof(OPTAB));
+    strcpy(optab->inst, inst);
+    optab->opcode = opcode;
+    optab->format = format;
+    return optab;
+}
+
+int hashcode(char *key)
+{
+    //printf("%d\n", (int)strlen(key));
+    int hash = 0;
+
+    for (int i = 0; i < strlen(key); i++)
+    {
+        hash += key[i];
+    }
+    //printf("hash : %d\n",hash);
+    return hash % OP_SIZE;
+}
+
+
+OPTAB *get(const char *inst)
+{
+    char key[20] = "";
+    strcpy(key, inst);
+    int idx = hashcode(key);
+    do
+    {
+        OPTAB *o = hash_optab[idx];
+        if (o == NULL)
+            return NULL;
+
+        if (strcmp(o->inst, inst) == 0)
+            return o;
+
+        idx++;
+    } while (1);
+}
+
+void insert(OPTAB* op)
+{
+    char* key = op->inst;
+    int idx = hashcode(key);
+    do
+    {
+        if(hash_optab[idx] == NULL){
+            hash_optab[idx] = op;
+            break;
+        }
+        else if(hash_optab[idx]->opcode == op->opcode)
+        {
+            free(hash_optab[idx]);
+            hash_optab[idx] = op;
+        }
+        idx++;
+    } while (1);
+    
+}
+
+void printOPTAB()
+{
+    printf("\n optable ====================\n");
+    for(int i=0 ; i<OP_SIZE ; i++)
+    {
+        OPTAB* o = hash_optab[i];
+        if(o == NULL) 
+            continue;
+        printf("%d\t%s\t%.2X\t%d\n",i ,o->inst, o->opcode, o->format);
+    }
+}
+
+void MakeOptable()
+{
+    insert(createOP("ADD", 0x18, 3));
+    insert(createOP("ADDF", 0x58, 3));
+    insert(createOP("ADDR", 0x90, 2));
+    insert(createOP("AND", 0x40, 3));
+    insert(createOP("CLEAR", 0xB4, 2));
+    insert(createOP("COMP",0x28,3));
+    insert(createOP("COMPF",0x88,3));
+    insert(createOP("COMPR",0xA0,2));
+    insert(createOP("DIV",0x24,3));
+    insert(createOP("DIVF",0x64,3));
+    insert(createOP("DIVR",0x9C,2));
+    insert(createOP("FIX",0xC4,1));
+    insert(createOP("FLOAT",0xC0,1));
+    insert(createOP("HIO",0xF4,1));
+    insert(createOP("J",0x3C,3));
+    insert(createOP("JEQ",0x30,3));
+    insert(createOP("JGT",0x34,3));
+    insert(createOP("JLT",0x38,3));
+    insert(createOP("JSUB",0x48,3));
+    insert(createOP("LDA",0x00,3));
+    insert(createOP("LDB",0x68,3));
+    insert(createOP("LDCH",0x50,3));
+    insert(createOP("LDF",0x70,3));
+    insert(createOP("LDL",0x08,3));
+    insert(createOP("LDS",0x6C,3));
+    insert(createOP("LDT",0x74,3));
+    insert(createOP("LDX",0x04,3));
+    insert(createOP("LPS",0xD0,3));
+    insert(createOP("MUL",0x20,3));
+    insert(createOP("MULF",0x60,3));
+    insert(createOP("MULR",0x98,2));
+    insert(createOP("NORM",0xC8,1));
+    insert(createOP("OR",0x44,3));
+    insert(createOP("RD",0xD8,3));
+    insert(createOP("RMO",0xAC,2));
+    insert(createOP("RSUB",0x4C,3));
+    insert(createOP("SHIFTL",0xA4,2));
+    insert(createOP("SHIFTR",0xA8,2));
+    insert(createOP("SIO",0xF0,1));
+    insert(createOP("SSK",0xEC,3));
+    insert(createOP("STA",0x0C,3));
+    insert(createOP("STB",0x78,3));
+    insert(createOP("STCH",0x54,3));
+    insert(createOP("STF",0x80,3));
+    insert(createOP("STI",0xD4,3));
+    insert(createOP("STL",0x14,3));
+    insert(createOP("STS",0x7C,3));
+    insert(createOP("STSW",0xE8,3));
+    insert(createOP("STT",0x84,3));
+    insert(createOP("STX",0x10,3));
+    insert(createOP("SUB",0x1C,3));
+    insert(createOP("SUBF",0x5C,3));
+    insert(createOP("SUBR",0x94,2));
+    insert(createOP("SVC",0xB0,2));
+    insert(createOP("TD",0xE0,3));
+    insert(createOP("TIO",0xF8,1));
+    insert(createOP("TIX",0x2C,3));
+    insert(createOP("TIXR",0xB8,2));
+    insert(createOP("WD",0xDC,3));
+}
+
+bool _UseHash = false;
+
 int main(int argc, char** argv)
 {
     char *r_path;
     char *w_path;
+    char *isHash;
     char line[100];
+    
 
     if(argc < 1)
         return EXIT_FAILURE;
 
     r_path = argv[1];
     w_path = argv[2];
+    isHash = argv[3];
 
     /* Open file */
     FILE *r_file = fopen(r_path, "r");
@@ -71,6 +216,13 @@ int main(int argc, char** argv)
     FILE *wfp = fopen("Intermediate_file", "w");
     // Assembly listing file
     FILE *fp_Assembly = fopen("Assembly_listing_file" ,"w");
+    // Check Hash
+    if(isHash != NULL && strcmp(isHash, "hash") == 0)
+    {
+        _UseHash = true;
+        MakeOptable();
+        //printOPTAB();
+    }
 
     if(!r_file)
     {
@@ -88,17 +240,6 @@ int main(int argc, char** argv)
     {
         if (strstr(line, ".") != NULL)
         {
-            // int dot_position = (int)(strchr(line, '.') - line);
-            // char *temp = substring(line, dot_position, (int)strlen(line) - 1);
-            // input[line_count].comment = (char *)malloc((int)strlen(line));
-            // memset(input[line_count].comment, 0, (int)strlen(line));
-            // strcpy(input[line_count].comment, temp);
-            // printf("%s",input[line_count].comment);
-            // if (line[0] == '.')
-            // {
-            //     line_count++;
-            //     continue;
-            // }
             input[line_count].comment = (char *)malloc((int)strlen(line)+1);
             memset(input[line_count].comment, 0, (int)strlen(line)+1);
             strcpy(input[line_count].comment, line);
@@ -123,7 +264,7 @@ int main(int argc, char** argv)
                 token = strtok(NULL, delimit);
             }
             if (tok_num == 1)
-            { // Only RSUB
+            { 
                 strcpy(input[line_count].opcode, temp1);
             }
             else if (tok_num == 2)
@@ -145,7 +286,7 @@ int main(int argc, char** argv)
     int i = 1;
     bool hasStart = false;
 
-    for(i=1;i<line_count;i++)
+    for (i = 1; i < line_count; i++)
     {
         if (strcmp(input[i].opcode, "START") == 0)
         {
@@ -173,8 +314,6 @@ int main(int argc, char** argv)
     else
         LOCCTR = 0;
 
-    bool chk_sym;
-
     do
     {
         if (input[i].comment != NULL)
@@ -182,18 +321,19 @@ int main(int argc, char** argv)
             i++;
             continue;
         }
-
-        chk_sym = true;
+        bool chk_sym = true;
+        
         if ((int)strlen(input[i].symbol) != 0)
         {
-            for (int j = 0; j < sym_cnt; j++)
-            {
-                if (strcmp(input[i].symbol, symtab[j].name) == 0)
-                {
-                    chk_sym = false;
-                    break;
-                }
-            }
+            chk_sym = findSymbol(input[i].symbol);
+            // for (int j = 0; j < sym_cnt; j++)
+            // {
+            //     if (strcmp(input[i].symbol, symtab[j].name) == 0)
+            //     {
+            //         chk_sym = false;
+            //         break;
+            //     }
+            // }
             if (chk_sym == true)
             {
                 strcpy(symtab[sym_cnt].name, input[i].symbol);
@@ -208,7 +348,7 @@ int main(int argc, char** argv)
         }
 
         input[i].loc = LOCCTR;
-
+        
         if (is_opcode(input[i].opcode) == true)
         {
             if (format == 1)
@@ -245,6 +385,9 @@ int main(int argc, char** argv)
         i++;
     } while (strcmp(input[i].opcode, "END") != 0);
 
+
+
+
     // write symbol table in Intermediate file
     char c_sym_cnt[10];
 
@@ -277,23 +420,6 @@ int main(int argc, char** argv)
     //          Finish Pass1                
     ////////////////////////////////////////
 
-    // printf("line count is %d\n",line_count);
-    // printf("%s", input[line_count-1].opcode);
-
-    /*
-    char *w_path;
-    w_path = argv[2];
-    FILE *w_file = fopen(w_path, "w");
-    if(!w_file)
-    {
-        perror(w_path);
-        return EXIT_FAILURE;
-    }
-    if(fclose(w_file)){
-        return EXIT_FAILURE;
-        perror(w_path);
-    }
-    */
 
 
     ////////////////////////////////////////
@@ -872,37 +998,74 @@ int main(int argc, char** argv)
     }
 
     fprintf(F_object, "E%06X\n", First_addr);
-    
-
 
     fclose(F_object);
 }
 
-
-bool is_opcode(char* str)
+bool is_opcode(char *str)
 {
     bool result = false;
-    if(str[0] == '+'){
-        char temp[10];
-        strcpy(temp, str+1);
-        for(int i=0;i < op_cnt;i++){
-            if(strcmp(optab[i].inst, temp) == 0){
+
+    if (_UseHash == true)
+    {
+        if (str[0] == '+')
+        {
+            char temp[10];
+            strcpy(temp, str + 1);
+
+            OPTAB *opt = get(temp);
+            if (opt == NULL)
+                return false;
+            else
+            {
                 result = true;
-                format=4;
-                break;
+                format = opt->format;
             }
         }
-    }else{
-        for(int i=0;i<op_cnt;i++){
-            if(strcmp(optab[i].inst, str) == 0){
+        else
+        {
+            OPTAB *opt = get(str);
+            if (opt == NULL)
+                return false;
+            else
+            {
                 result = true;
-                format = optab[i].format;
-                break;
+                format = opt->format;
+            }
+        }
+    }
+    else
+    {
+        if (str[0] == '+')
+        {
+            char temp[10];
+            strcpy(temp, str + 1);
+            for (int i = 0; i < op_cnt; i++)
+            {
+                if (strcmp(optab[i].inst, temp) == 0)
+                {
+                    result = true;
+                    format = 4;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < op_cnt; i++)
+            {
+                if (strcmp(optab[i].inst, str) == 0)
+                {
+                    result = true;
+                    format = optab[i].format;
+                    break;
+                }
             }
         }
     }
     return result;
 }
+
 bool is_opcode2(char* str, int* opcode)
 {
     bool result = false;
@@ -923,6 +1086,27 @@ bool is_opcode2(char* str, int* opcode)
                 result = true;
                 *opcode = optab[i].opcode;
                 format = optab[i].format;
+                break;
+            }
+        }
+    }
+    return result;
+}
+
+bool findSymbol(char* input)
+{
+    bool result = true;
+    if(_UseHash == true)
+    {
+
+    }
+    else
+    {
+        for(int i=0;i<sym_cnt;i++)
+        {
+            if(strcmp(input, symtab[i].name) == 0)
+            {
+                result = false;
                 break;
             }
         }
