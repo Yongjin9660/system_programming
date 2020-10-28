@@ -36,6 +36,8 @@ typedef struct{
 
 SYMTAB symtab[MAX_LINE_LENGTH];
 SYMTAB* hash_symtab[MAX_LINE_LENGTH];
+SYMTAB *st;
+SYMTAB* hash_symtab_2[MAX_LINE_LENGTH];
 
 int sym_cnt = 0;
 int format;
@@ -54,6 +56,7 @@ INPUT input[MAX_LINE_LENGTH];
 bool is_opcode(char *);
 bool is_opcode2(char* , int*);
 bool findSymbol(char*);
+bool findSymbol2(char*, int*);
 unsigned int getRegisterNum(char);
 char* substring(char*, int, int);
 char* toHex(int, int);
@@ -129,7 +132,22 @@ SYMTAB *get_SYM(const char *name)
 
         if (strcmp(o->name, name) == 0)
             return o;
+        idx++;
+    } while (1);
+}
+SYMTAB *get_SYM_2(const char *name)
+{
+    char key[20] = "";
+    strcpy(key, name);
+    int idx = hashcode_SYM(key);
+    do
+    {
+        SYMTAB *o = hash_symtab_2[idx];
+        if (o == NULL)
+            return NULL;
 
+        if (strcmp(o->name, name) == 0)
+            return o;
         idx++;
     } while (1);
 }
@@ -166,6 +184,28 @@ bool insert_SYM(SYMTAB *sy)
             break;
         }
         else if (strcmp(hash_symtab[idx]->name, sy->name) == 0)
+        {
+            result = false;
+            break;
+        }
+        idx++;
+    } while (1);
+    return result;
+}
+bool insert_SYM_2(SYMTAB *sy)
+{
+    char *key = sy->name;
+    int idx = hashcode_SYM(key);
+    bool result;
+    do
+    {
+        if (hash_symtab_2[idx] == NULL)
+        {
+            hash_symtab_2[idx] = sy;
+            result = true;
+            break;
+        }
+        else if (strcmp(hash_symtab_2[idx]->name, sy->name) == 0)
         {
             result = false;
             break;
@@ -551,33 +591,34 @@ int main(int argc, char** argv)
     fgets(line, 50, fp);
     token = strtok(line, delimit);
     SYMTAB_size = atoi(token);
-    SYMTAB st[SYMTAB_size];
+    st = (SYMTAB *)malloc(sizeof(SYMTAB) * SYMTAB_size);
+    //SYMTAB st[SYMTAB_size];
 
-    for (int j = 0; j < SYMTAB_size; j++)
+    if (_UseHash == true)
     {
-        fgets(line, 50, fp);
-        token = strtok(line, delimit);
-        strcpy(st[j].name, token);
-        token = strtok(NULL, delimit);
-        st[j].value = atoi(token);
+        for (int i = 0; i < SYMTAB_size; i++)
+        {
+            fgets(line, 50, fp);
+            char temp_name[10];
+            int temp_value;
+            token = strtok(line, delimit);
+            strcpy(temp_name, token);
+            token = strtok(NULL, delimit);
+            temp_value = atoi(token);
+            insert_SYM_2(createSYM(temp_name, temp_value));
+        }
     }
-
-    //    for(int j=0;j<SYMTAB_size;j++){
-    //         printf("name : %s  | value: %d\n",st[j].name,st[j].value);
-    //     }
-
-
-    //fgets(line, 50, fp);
-
-    //printf("first line : %s\n",line);
-
-    //token = strtok(line, delimit);
-    //token = strtok(NULL, delimit);
-
-    // if(strcmp(token,"START")==0){}
-    // else
-    //     return EXIT_FAILURE;
-    
+    else
+    {
+        for (int j = 0; j < SYMTAB_size; j++)
+        {
+            fgets(line, 50, fp);
+            token = strtok(line, delimit);
+            strcpy(st[j].name, token);
+            token = strtok(NULL, delimit);
+            st[j].value = atoi(token);
+        }
+    }
 
     while(fgets(line, 50, fp))
     {
@@ -626,14 +667,15 @@ int main(int argc, char** argv)
             if(strcmp(t1, "BASE") == 0)
             {
                 fprintf(fp_Assembly, "\t\t%s\t%s\n", t1, t2);
-                for(int j=0;j<SYMTAB_size;j++)
-                {
-                    if(strcmp(st[j].name, t2) == 0)
-                    {
-                        Base_addr = st[j].value;
-                        break;
-                    }
-                }
+                findSymbol2(t2, &Base_addr);
+                // for (int j = 0; j < SYMTAB_size; j++)
+                // {
+                //     if (strcmp(st[j].name, t2) == 0)
+                //     {
+                //         Base_addr = st[j].value;
+                //         break;
+                //     }
+                // }
                 continue;
             }
 
@@ -642,8 +684,6 @@ int main(int argc, char** argv)
             strcpy(t_opcode, t2);
             strcpy(t_operand,"");
             strcpy(t_symbol,"");
-            //fprintf(fp_Assembly, "%.4X\t\t%s\n", t_loc, t_opcode);
-
         }
         else if(tok_num == 3)
         {
@@ -651,7 +691,6 @@ int main(int argc, char** argv)
             strcpy(t_opcode, t2);
             strcpy(t_operand, t3);
             strcpy(t_symbol,"");
-            //fprintf(fp_Assembly, "%.4X\t\t%s\t%s\n", t_loc, t_opcode, t_operand);
         }
         else if(tok_num == 4)
         {
@@ -659,7 +698,6 @@ int main(int argc, char** argv)
             strcpy(t_symbol, t2);
             strcpy(t_opcode, t3);
             strcpy(t_operand, t4);
-            //fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\n", t_loc, t_symbol, t_opcode, t_operand);
         }
 
         int opcode = 0;
@@ -710,7 +748,6 @@ int main(int argc, char** argv)
                     strcpy(object_code[object_cnt], temp);
                     arr_loc[object_cnt] = t_loc;
                     object_cnt++;
-                    
                 }
                 else
                 {
@@ -737,16 +774,26 @@ int main(int argc, char** argv)
                     {
                         char temp[10];
                         bool isSymbol = false;
-                        strcpy(temp, t_operand+1);
+                        strcpy(temp, t_operand + 1);
+                        //printf("temp : %s\t",temp);
 
-                        for(int j=0;j<SYMTAB_size;j++){
-                            if(strcmp(st[j].name, temp) == 0){
-                                addr = st[j].value - t_loc - 3;
-                                isSymbol = true;
-                                break;
-                            }
-                        }
-                        if(!isSymbol && t_operand[0] == '#'){
+                        isSymbol = findSymbol2(temp, &addr);
+                        if (isSymbol)
+                            addr = addr - t_loc - 3;
+
+                        // for (int j = 0; j < SYMTAB_size; j++)
+                        // {
+                        //     if (strcmp(st[j].name, temp) == 0)
+                        //     {
+                        //         addr = st[j].value - t_loc - 3;
+                        //         isSymbol = true;
+                        //         break;
+                        //     }
+                        // }
+                        //printf("isSymbol : %d\n",isSymbol);
+                       
+                        if(!isSymbol && t_operand[0] == '#')
+                        {
                             addr = atoi(temp);
                             xbpe = 0;
                         }
@@ -780,126 +827,248 @@ int main(int argc, char** argv)
                             }
                         }
                         char *sym = substring(t_operand, 0, comma_position - 1);
-                        for (int k = 0; k < SYMTAB_size; k++)
+
+                        bool isSymbol = findSymbol2(sym, &addr);
+                        int ori_addr = addr;
+                        if (isSymbol)
+                            addr = addr - t_loc - 3;
+
+                        if (addr > 2047 || addr < -2048)
                         {
-                            if (strcmp(sym, st[k].name) == 0)
-                            {
-                                addr = st[k].value - t_loc - 3;
-
-                                if (addr > 2047 || addr < -2048)
-                                {
-                                    addr = st[k].value - Base_addr;
-                                    xbpe = 12;
-                                }
-                                else if (addr < 0)
-                                {
-                                    opcode += 3;
-                                    xbpe += 8;
-                                    fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X", t_loc, t_symbol, t_opcode, t_operand, opcode, xbpe);
-
-                                    char s[10];
-                                    sprintf(s, "%X", addr);
-
-                                    //char *temp_addr = substring(s, 0, comma_position - 1);
-
-
-                                    int len = strlen(s) - 3;
-                                    
-                                    char* op = toHex(opcode, 2);
-                                    char* xb = toHex(xbpe,1);
-                                    char *temp_addr = substring(s, 5, strlen(s) - 1);
-                                    //char disp[3];
-                                    
-                                    // for (int i = 0; i < 3; i++)
-                                    // {
-                                    //     fprintf(fp_Assembly, "%c", s[len]);
-                                    //     disp[i] = s[len];
-                                    //     len++;
-                                    // }
-                                    char temp[6] = "";
-                                    strcat(temp, op);
-                                    strcat(temp, xb);
-                                    strcat(temp, temp_addr);
-                                    strcpy(object_code[object_cnt], temp);
-                                    arr_loc[object_cnt] = t_loc;
-                                    object_cnt++;
-                                    fprintf(fp_Assembly, "\n");
-                                    print = true;
-                                }
-                            }
+                            addr = ori_addr - Base_addr;
+                            xbpe = 12;
                         }
+                        else if (addr < 0)
+                        {
+                            opcode += 3;
+                            xbpe += 8;
+                            fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X", t_loc, t_symbol, t_opcode, t_operand, opcode, xbpe);
+
+                            char s[10];
+                            sprintf(s, "%X", addr);
+
+                            //char *temp_addr = substring(s, 0, comma_position - 1);
+
+                            int len = strlen(s) - 3;
+
+                            char *op = toHex(opcode, 2);
+                            char *xb = toHex(xbpe, 1);
+                            char *temp_addr = substring(s, 5, strlen(s) - 1);
+                            //char disp[3];
+
+                            // for (int i = 0; i < 3; i++)
+                            // {
+                            //     fprintf(fp_Assembly, "%c", s[len]);
+                            //     disp[i] = s[len];
+                            //     len++;
+                            // }
+                            char temp[6] = "";
+                            strcat(temp, op);
+                            strcat(temp, xb);
+                            strcat(temp, temp_addr);
+                            strcpy(object_code[object_cnt], temp);
+                            arr_loc[object_cnt] = t_loc;
+                            object_cnt++;
+                            fprintf(fp_Assembly, "\n");
+                            print = true;
+                        }
+
+                        // for (int k = 0; k < SYMTAB_size; k++)
+                        // {
+                        //     if (strcmp(sym, st[k].name) == 0)
+                        //     {
+                        //         addr = st[k].value - t_loc - 3;
+
+                        //         if (addr > 2047 || addr < -2048)
+                        //         {
+                        //             addr = st[k].value - Base_addr;
+                        //             xbpe = 12;
+                        //         }
+                        //         else if (addr < 0)
+                        //         {
+                        //             opcode += 3;
+                        //             xbpe += 8;
+                        //             fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X", t_loc, t_symbol, t_opcode, t_operand, opcode, xbpe);
+
+                        //             char s[10];
+                        //             sprintf(s, "%X", addr);
+
+                        //             //char *temp_addr = substring(s, 0, comma_position - 1);
+
+
+                        //             int len = strlen(s) - 3;
+                                    
+                        //             char* op = toHex(opcode, 2);
+                        //             char* xb = toHex(xbpe,1);
+                        //             char *temp_addr = substring(s, 5, strlen(s) - 1);
+                        //             //char disp[3];
+
+                        //             // for (int i = 0; i < 3; i++)
+                        //             // {
+                        //             //     fprintf(fp_Assembly, "%c", s[len]);
+                        //             //     disp[i] = s[len];
+                        //             //     len++;
+                        //             // }
+                        //             char temp[6] = "";
+                        //             strcat(temp, op);
+                        //             strcat(temp, xb);
+                        //             strcat(temp, temp_addr);
+                        //             strcpy(object_code[object_cnt], temp);
+                        //             arr_loc[object_cnt] = t_loc;
+                        //             object_cnt++;
+                        //             fprintf(fp_Assembly, "\n");
+                        //             print = true;
+                        //         }
+                        //     }
+                        // }
                     }
                     else
                     {
-                        bool findSym = false;
-                        for(int j=0;j<SYMTAB_size;j++)
+                        bool findSym = findSymbol2(t_operand, &addr);
+                        int ori_addr = addr;
+                        // if (findSym)
+                        //     addr = addr - t_loc - 3;
+
+                        if (format == 4)
                         {
-                            if(strcmp(st[j].name, t_operand) == 0)
+                            //addr = st[j].value;
+                        }
+                        else
+                        {
+                            addr = addr - t_loc - 3;
+
+                            // if(strcmp(t_operand, "LENGTH")==0)
+                            // {
+                            //     printf("addr : %d\t",addr);
+                            // }
+
+                            if (addr > 2047 || addr < -2048)
                             {
-                                findSym = true;
-                                if(format == 4)
-                                    addr = st[j].value;
-                                else
-                                {
-                                    addr = st[j].value - t_loc - 3;
+                                addr = ori_addr - Base_addr;
+                                xbpe = 4;
+                                printf("Base : %d\t",Base_addr);
+                                printf("New addr : %d\n", addr);
+                            }
+                            else if (addr < 0)
+                            {
+                                opcode += 3;
 
-                                    if (addr > 2047 || addr < -2048)
-                                    {
-                                        addr = st[j].value - Base_addr;
-                                        xbpe = 4;
-                                    }
-                                    else if(addr < 0)
-                                    {
-                                        opcode += 3;
-                                                                        
-                                        fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X",t_loc, t_symbol,t_opcode, t_operand,opcode,xbpe);
+                                fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X", t_loc, t_symbol, t_opcode, t_operand, opcode, xbpe);
 
-                                        char s[10];
-                                        sprintf(s, "%X", addr);
+                                char s[10];
+                                sprintf(s, "%X", addr);
 
-                                        //printf("This is : %s\n",s);
-                                        //printf("len : %d\n",(int)strlen(s));
-                                        int len = strlen(s) - 3;
+                                //printf("This is : %s\n",s);
+                                //printf("len : %d\n",(int)strlen(s));
+                                int len = strlen(s) - 3;
 
-                                        char *op = toHex(opcode, 2);
-                                        char *xb = toHex(xbpe, 1);
-                                        char disp[3];
+                                char *op = toHex(opcode, 2);
+                                char *xb = toHex(xbpe, 1);
+                                char disp[3];
 
-                                        char *temp_addr = substring(s, 5, strlen(s) - 1);
-                                        //printf("temp : %s\n",temp_addr);
+                                char *temp_addr = substring(s, 5, strlen(s) - 1);
+                                //printf("temp : %s\n",temp_addr);
 
-                                        // for (int i = 0; i < 3; i++)
-                                        // {
-                                        //     fprintf(fp_Assembly, "%c", s[len]);
-                                        //     disp[i] = s[len];
-                                        //     len++;
-                                        // }
-                                        fprintf(fp_Assembly, "\n");
-                                        print = true;
-                                        ////
-                                        //printf("%s\n",disp);
-                                        char temp[6];
-                                        strcpy(temp,"");
-                                        strcat(temp, op);
-                                        strcat(temp, xb);
-                                        //strcat(temp, disp);
-                                        strcat(temp, temp_addr);
-                                        //printf("%s\n",temp);
-                                        strcpy(object_code[object_cnt], temp);
-                                        arr_loc[object_cnt] = t_loc;
-                                        object_cnt++;
-                                    }
-                                } 
-                                ni = 3;
-                                break;
+                                // for (int i = 0; i < 3; i++)
+                                // {
+                                //     fprintf(fp_Assembly, "%c", s[len]);
+                                //     disp[i] = s[len];
+                                //     len++;
+                                // }
+                                fprintf(fp_Assembly, "%s\n", temp_addr);
+                                print = true;
+                                ////
+                                //printf("%s\n",disp);
+                                char temp[6];
+                                strcpy(temp, "");
+                                strcat(temp, op);
+                                strcat(temp, xb);
+                                //strcat(temp, disp);
+                                strcat(temp, temp_addr);
+                                //printf("%s\n",temp);
+                                strcpy(object_code[object_cnt], temp);
+                                arr_loc[object_cnt] = t_loc;
+                                object_cnt++;
                             }
                         }
-                        if(!findSym)
+                        ni = 3;
+
+                        if (!findSym)
                         {
                             fputs("undefined symbol\n", fp_Assembly);
-                            fputs(t_operand,fp_Assembly);
+                            fputs(t_operand, fp_Assembly);
                             addr = 0;
+                            return EXIT_FAILURE;
                         }
+                        // bool findSym = false;
+                        // for(int j=0;j<SYMTAB_size;j++)
+                        // {
+                        //     if(strcmp(st[j].name, t_operand) == 0)
+                        //     {
+                        //         findSym = true;
+                        //         if(format == 4)
+                        //             addr = st[j].value;
+                        //         else
+                        //         {
+                        //             addr = st[j].value - t_loc - 3;
+
+                        //             if (addr > 2047 || addr < -2048)
+                        //             {
+                        //                 addr = st[j].value - Base_addr;
+                        //                 xbpe = 4;
+                        //             }
+                        //             else if(addr < 0)
+                        //             {
+                        //                 opcode += 3;
+                                                                        
+                        //                 fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X",t_loc, t_symbol,t_opcode, t_operand,opcode,xbpe);
+
+                        //                 char s[10];
+                        //                 sprintf(s, "%X", addr);
+
+                        //                 //printf("This is : %s\n",s);
+                        //                 //printf("len : %d\n",(int)strlen(s));
+                        //                 int len = strlen(s) - 3;
+
+                        //                 char *op = toHex(opcode, 2);
+                        //                 char *xb = toHex(xbpe, 1);
+                        //                 char disp[3];
+
+                        //                 char *temp_addr = substring(s, 5, strlen(s) - 1);
+                        //                 //printf("temp : %s\n",temp_addr);
+
+                        //                 // for (int i = 0; i < 3; i++)
+                        //                 // {
+                        //                 //     fprintf(fp_Assembly, "%c", s[len]);
+                        //                 //     disp[i] = s[len];
+                        //                 //     len++;
+                        //                 // }
+                        //                 fprintf(fp_Assembly, "\n");
+                        //                 print = true;
+                        //                 ////
+                        //                 //printf("%s\n",disp);
+                        //                 char temp[6];
+                        //                 strcpy(temp,"");
+                        //                 strcat(temp, op);
+                        //                 strcat(temp, xb);
+                        //                 //strcat(temp, disp);
+                        //                 strcat(temp, temp_addr);
+                        //                 //printf("%s\n",temp);
+                        //                 strcpy(object_code[object_cnt], temp);
+                        //                 arr_loc[object_cnt] = t_loc;
+                        //                 object_cnt++;
+                        //             }
+                        //         } 
+                        //         ni = 3;
+                        //         break;
+                        //     }
+                        // }
+                        // if(!findSym)
+                        // {
+                        //     fputs("undefined symbol\n", fp_Assembly);
+                        //     fputs(t_operand,fp_Assembly);
+                        //     addr = 0;
+                        // }
                     }
                 }
                 else
@@ -909,7 +1078,7 @@ int main(int argc, char** argv)
                 }
             }
         }
-        else if(strcmp(t_opcode,"BYTE")==0)
+        else if(strcmp(t_opcode,"BYTE") == 0)
         {
             fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t",t_loc, t_symbol, t_opcode, t_operand);
             if (t_operand[0] == 'C')
@@ -949,16 +1118,6 @@ int main(int argc, char** argv)
             fprintf(fp_Assembly, "\n");
             object_cnt++;
             print = true;
-        }
-        else if(strcmp(t_opcode,"BASE")==0)
-        {
-            for(int j=0;j<SYMTAB_size;j++){
-                if(strcmp(t_operand, st[j].name) == 0){
-                    base = st[j].value;
-                    break;
-                }
-            }
-            continue;
         }
         else if(strcmp(t_opcode,"RESW") == 0 || strcmp(t_opcode,"RESB")==0)
         {
@@ -1002,15 +1161,21 @@ int main(int argc, char** argv)
                 strcpy(object_code[object_cnt], temp);
                 arr_loc[object_cnt++] = t_loc;
 
-                for (int a = 0; a < SYMTAB_size; a++)
+                if (!findSymbol(t_operand) == true)
                 {
-                    if (strcmp(t_operand, st[a].name) == 0)
-                    {
-                        Modification_arr[modifi_cnt] = t_loc;
-                        modifi_cnt++;
-                        break;
-                    }
+                    Modification_arr[modifi_cnt] = t_loc;
+                    modifi_cnt++;
                 }
+
+                // for (int a = 0; a < SYMTAB_size; a++)
+                // {
+                //     if (strcmp(t_operand, st[a].name) == 0)
+                //     {
+                //         Modification_arr[modifi_cnt] = t_loc;
+                //         modifi_cnt++;
+                //         break;
+                //     }
+                // }
             }
             else
             {
@@ -1169,27 +1334,70 @@ bool is_opcode(char *str)
 bool is_opcode2(char* str, int* opcode)
 {
     bool result = false;
-    if(str[0] == '+'){
-        char temp[10];
-        strcpy(temp, str+1);
-        for(int i=0;i < op_cnt;i++){
-            if(strcmp(optab[i].inst, temp) == 0){
+
+    if (_UseHash == true)
+    {
+        if (str[0] == '+')
+        {
+            char temp[10];
+            strcpy(temp, str + 1);
+
+
+            OPTAB *opt = get(temp);
+            if (opt == NULL)
+                return false;
+            else
+            {
                 result = true;
-                format=4;
-                *opcode = optab[i].opcode;
-                break;
+                format = 4;
+                *opcode = opt->opcode;
             }
         }
-    }else{
-        for(int i=0;i < op_cnt;i++){
-            if(strcmp(optab[i].inst, str) == 0){
+        else
+        {
+            OPTAB *opt = get(str);
+            if (opt == NULL)
+                return false;
+            else
+            {
                 result = true;
-                *opcode = optab[i].opcode;
-                format = optab[i].format;
-                break;
+                format = opt->format;
+                *opcode = opt->opcode;
             }
         }
     }
+    else
+    {
+        if (str[0] == '+')
+        {
+            char temp[10];
+            strcpy(temp, str + 1);
+            for (int i = 0; i < op_cnt; i++)
+            {
+                if (strcmp(optab[i].inst, temp) == 0)
+                {
+                    result = true;
+                    format = 4;
+                    *opcode = optab[i].opcode;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < op_cnt; i++)
+            {
+                if (strcmp(optab[i].inst, str) == 0)
+                {
+                    result = true;
+                    *opcode = optab[i].opcode;
+                    format = optab[i].format;
+                    break;
+                }
+            }
+        }
+    }
+
     return result;
 }
 
@@ -1216,6 +1424,33 @@ bool findSymbol(char* input)
         }
     }
     return result;
+}
+bool findSymbol2(char* input, int *addr)
+{
+    bool result = false;
+    if(_UseHash == true)
+    {
+        SYMTAB *sym = get_SYM_2(input);
+        if(sym == NULL)
+            return false;
+        else
+        {
+            *addr = sym->value;
+            return true;
+        }
+    }
+    else
+    {
+        for(int i=0;i<sym_cnt;i++)
+        {
+            if(strcmp(input, symtab[i].name) == 0)
+            {
+                *addr = symtab[i].value;
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 unsigned int getRegisterNum(char regi)
