@@ -307,7 +307,6 @@ int main(int argc, char** argv)
     {
         _UseHash = true;
         MakeOptable();
-        //printOPTAB();
     }
 
     if(!r_file)
@@ -330,7 +329,6 @@ int main(int argc, char** argv)
             memset(input[line_count].comment, 0, (int)strlen(line)+1);
             strcpy(input[line_count].comment, line);
             line_count++;
-
         }
         else
         {
@@ -350,9 +348,7 @@ int main(int argc, char** argv)
                 token = strtok(NULL, delimit);
             }
             if (tok_num == 1)
-            { 
                 strcpy(input[line_count].opcode, temp1);
-            }
             else if (tok_num == 2)
             {
                 strcpy(input[line_count].opcode, temp1);
@@ -466,9 +462,7 @@ int main(int argc, char** argv)
                 LOCCTR += 1;
             
         }
-        else if (strcmp(input[i].opcode, "BASE") == 0)
-        {
-        }
+        else if (strcmp(input[i].opcode, "BASE") == 0){}
         else
         {
             fputs("invalid operation code", fp_Assembly);
@@ -476,7 +470,6 @@ int main(int argc, char** argv)
         }
         i++;
     } while (strcmp(input[i].opcode, "END") != 0);
-
 
     // write symbol table in Intermediate file
     if (_UseHash == true)
@@ -560,8 +553,6 @@ int main(int argc, char** argv)
     //          Finish Pass1                
     ////////////////////////////////////////
 
-
-
     ////////////////////////////////////////
     //          Start Pass2                
     ////////////////////////////////////////
@@ -581,18 +572,14 @@ int main(int argc, char** argv)
     FILE *F_object = fopen(w_path, "w");
 
     if(!F_object)
-    {
         return EXIT_FAILURE;
-    }
-    if(!fp){
+    if(!fp)
         return EXIT_FAILURE;
-    }
 
     fgets(line, 50, fp);
     token = strtok(line, delimit);
     SYMTAB_size = atoi(token);
     st = (SYMTAB *)malloc(sizeof(SYMTAB) * SYMTAB_size);
-    //SYMTAB st[SYMTAB_size];
 
     if (_UseHash == true)
     {
@@ -668,14 +655,6 @@ int main(int argc, char** argv)
             {
                 fprintf(fp_Assembly, "\t\t%s\t%s\n", t1, t2);
                 findSymbol2(t2, &Base_addr);
-                // for (int j = 0; j < SYMTAB_size; j++)
-                // {
-                //     if (strcmp(st[j].name, t2) == 0)
-                //     {
-                //         Base_addr = st[j].value;
-                //         break;
-                //     }
-                // }
                 continue;
             }
 
@@ -775,22 +754,9 @@ int main(int argc, char** argv)
                         char temp[10];
                         bool isSymbol = false;
                         strcpy(temp, t_operand + 1);
-                        //printf("temp : %s\t",temp);
-
                         isSymbol = findSymbol2(temp, &addr);
                         if (isSymbol)
                             addr = addr - t_loc - 3;
-
-                        // for (int j = 0; j < SYMTAB_size; j++)
-                        // {
-                        //     if (strcmp(st[j].name, temp) == 0)
-                        //     {
-                        //         addr = st[j].value - t_loc - 3;
-                        //         isSymbol = true;
-                        //         break;
-                        //     }
-                        // }
-                        //printf("isSymbol : %d\n",isSymbol);
                        
                         if(!isSymbol && t_operand[0] == '#')
                         {
@@ -806,17 +772,6 @@ int main(int argc, char** argv)
                     }
                     else if (strstr(t_operand, ",") != NULL)
                     {
-                        // int dot_position = (int)(strchr(line, '.') - line);
-                        // char *temp = substring(line, dot_position, (int)strlen(line) - 1);
-                        // input[line_count].comment = (char *)malloc((int)strlen(line));
-                        // memset(input[line_count].comment, 0, (int)strlen(line));
-                        // strcpy(input[line_count].comment, temp);
-                        // printf("%s",input[line_count].comment);
-                        // if (line[0] == '.')
-                        // {
-                        //     line_count++;
-                        //     continue;
-                        // }
                         int comma_position;
                         for(int k=0;k<strlen(t_operand);k++)
                         {
@@ -847,21 +802,12 @@ int main(int argc, char** argv)
                             char s[10];
                             sprintf(s, "%X", addr);
 
-                            //char *temp_addr = substring(s, 0, comma_position - 1);
-
                             int len = strlen(s) - 3;
 
                             char *op = toHex(opcode, 2);
                             char *xb = toHex(xbpe, 1);
                             char *temp_addr = substring(s, 5, strlen(s) - 1);
-                            //char disp[3];
-
-                            // for (int i = 0; i < 3; i++)
-                            // {
-                            //     fprintf(fp_Assembly, "%c", s[len]);
-                            //     disp[i] = s[len];
-                            //     len++;
-                            // }
+                    
                             char temp[6] = "";
                             strcat(temp, op);
                             strcat(temp, xb);
@@ -872,82 +818,21 @@ int main(int argc, char** argv)
                             fprintf(fp_Assembly, "\n");
                             print = true;
                         }
-
-                        // for (int k = 0; k < SYMTAB_size; k++)
-                        // {
-                        //     if (strcmp(sym, st[k].name) == 0)
-                        //     {
-                        //         addr = st[k].value - t_loc - 3;
-
-                        //         if (addr > 2047 || addr < -2048)
-                        //         {
-                        //             addr = st[k].value - Base_addr;
-                        //             xbpe = 12;
-                        //         }
-                        //         else if (addr < 0)
-                        //         {
-                        //             opcode += 3;
-                        //             xbpe += 8;
-                        //             fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X", t_loc, t_symbol, t_opcode, t_operand, opcode, xbpe);
-
-                        //             char s[10];
-                        //             sprintf(s, "%X", addr);
-
-                        //             //char *temp_addr = substring(s, 0, comma_position - 1);
-
-
-                        //             int len = strlen(s) - 3;
-                                    
-                        //             char* op = toHex(opcode, 2);
-                        //             char* xb = toHex(xbpe,1);
-                        //             char *temp_addr = substring(s, 5, strlen(s) - 1);
-                        //             //char disp[3];
-
-                        //             // for (int i = 0; i < 3; i++)
-                        //             // {
-                        //             //     fprintf(fp_Assembly, "%c", s[len]);
-                        //             //     disp[i] = s[len];
-                        //             //     len++;
-                        //             // }
-                        //             char temp[6] = "";
-                        //             strcat(temp, op);
-                        //             strcat(temp, xb);
-                        //             strcat(temp, temp_addr);
-                        //             strcpy(object_code[object_cnt], temp);
-                        //             arr_loc[object_cnt] = t_loc;
-                        //             object_cnt++;
-                        //             fprintf(fp_Assembly, "\n");
-                        //             print = true;
-                        //         }
-                        //     }
-                        // }
                     }
                     else
                     {
                         bool findSym = findSymbol2(t_operand, &addr);
                         int ori_addr = addr;
-                        // if (findSym)
-                        //     addr = addr - t_loc - 3;
-
-                        if (format == 4)
-                        {
-                            //addr = st[j].value;
-                        }
+               
+                        if (format == 4){}
                         else
                         {
                             addr = addr - t_loc - 3;
-
-                            // if(strcmp(t_operand, "LENGTH")==0)
-                            // {
-                            //     printf("addr : %d\t",addr);
-                            // }
 
                             if (addr > 2047 || addr < -2048)
                             {
                                 addr = ori_addr - Base_addr;
                                 xbpe = 4;
-                                printf("Base : %d\t",Base_addr);
-                                printf("New addr : %d\n", addr);
                             }
                             else if (addr < 0)
                             {
@@ -957,9 +842,6 @@ int main(int argc, char** argv)
 
                                 char s[10];
                                 sprintf(s, "%X", addr);
-
-                                //printf("This is : %s\n",s);
-                                //printf("len : %d\n",(int)strlen(s));
                                 int len = strlen(s) - 3;
 
                                 char *op = toHex(opcode, 2);
@@ -967,25 +849,14 @@ int main(int argc, char** argv)
                                 char disp[3];
 
                                 char *temp_addr = substring(s, 5, strlen(s) - 1);
-                                //printf("temp : %s\n",temp_addr);
 
-                                // for (int i = 0; i < 3; i++)
-                                // {
-                                //     fprintf(fp_Assembly, "%c", s[len]);
-                                //     disp[i] = s[len];
-                                //     len++;
-                                // }
                                 fprintf(fp_Assembly, "%s\n", temp_addr);
                                 print = true;
-                                ////
-                                //printf("%s\n",disp);
                                 char temp[6];
                                 strcpy(temp, "");
                                 strcat(temp, op);
                                 strcat(temp, xb);
-                                //strcat(temp, disp);
                                 strcat(temp, temp_addr);
-                                //printf("%s\n",temp);
                                 strcpy(object_code[object_cnt], temp);
                                 arr_loc[object_cnt] = t_loc;
                                 object_cnt++;
@@ -1000,75 +871,6 @@ int main(int argc, char** argv)
                             addr = 0;
                             return EXIT_FAILURE;
                         }
-                        // bool findSym = false;
-                        // for(int j=0;j<SYMTAB_size;j++)
-                        // {
-                        //     if(strcmp(st[j].name, t_operand) == 0)
-                        //     {
-                        //         findSym = true;
-                        //         if(format == 4)
-                        //             addr = st[j].value;
-                        //         else
-                        //         {
-                        //             addr = st[j].value - t_loc - 3;
-
-                        //             if (addr > 2047 || addr < -2048)
-                        //             {
-                        //                 addr = st[j].value - Base_addr;
-                        //                 xbpe = 4;
-                        //             }
-                        //             else if(addr < 0)
-                        //             {
-                        //                 opcode += 3;
-                                                                        
-                        //                 fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X",t_loc, t_symbol,t_opcode, t_operand,opcode,xbpe);
-
-                        //                 char s[10];
-                        //                 sprintf(s, "%X", addr);
-
-                        //                 //printf("This is : %s\n",s);
-                        //                 //printf("len : %d\n",(int)strlen(s));
-                        //                 int len = strlen(s) - 3;
-
-                        //                 char *op = toHex(opcode, 2);
-                        //                 char *xb = toHex(xbpe, 1);
-                        //                 char disp[3];
-
-                        //                 char *temp_addr = substring(s, 5, strlen(s) - 1);
-                        //                 //printf("temp : %s\n",temp_addr);
-
-                        //                 // for (int i = 0; i < 3; i++)
-                        //                 // {
-                        //                 //     fprintf(fp_Assembly, "%c", s[len]);
-                        //                 //     disp[i] = s[len];
-                        //                 //     len++;
-                        //                 // }
-                        //                 fprintf(fp_Assembly, "\n");
-                        //                 print = true;
-                        //                 ////
-                        //                 //printf("%s\n",disp);
-                        //                 char temp[6];
-                        //                 strcpy(temp,"");
-                        //                 strcat(temp, op);
-                        //                 strcat(temp, xb);
-                        //                 //strcat(temp, disp);
-                        //                 strcat(temp, temp_addr);
-                        //                 //printf("%s\n",temp);
-                        //                 strcpy(object_code[object_cnt], temp);
-                        //                 arr_loc[object_cnt] = t_loc;
-                        //                 object_cnt++;
-                        //             }
-                        //         } 
-                        //         ni = 3;
-                        //         break;
-                        //     }
-                        // }
-                        // if(!findSym)
-                        // {
-                        //     fputs("undefined symbol\n", fp_Assembly);
-                        //     fputs(t_operand,fp_Assembly);
-                        //     addr = 0;
-                        // }
                     }
                 }
                 else
@@ -1140,15 +942,10 @@ int main(int argc, char** argv)
         if(!print)
         {
             opcode += ni;
-            //xbpe=2;
             if(format == 4)
             {
-
-                //               int Modification_arr[MAX_LINE_LENGTH];
-                // int modifi_cnt=0;
                 xbpe = 1;
                 fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X%.5X\n", t_loc, t_symbol, t_opcode, t_operand, opcode, xbpe, addr);
-
                 //opcode, xbpe, addr
                 char *op = toHex(opcode, 2);
                 char *xb = toHex(xbpe, 1);
@@ -1166,16 +963,6 @@ int main(int argc, char** argv)
                     Modification_arr[modifi_cnt] = t_loc;
                     modifi_cnt++;
                 }
-
-                // for (int a = 0; a < SYMTAB_size; a++)
-                // {
-                //     if (strcmp(t_operand, st[a].name) == 0)
-                //     {
-                //         Modification_arr[modifi_cnt] = t_loc;
-                //         modifi_cnt++;
-                //         break;
-                //     }
-                // }
             }
             else
             {
@@ -1187,9 +974,6 @@ int main(int argc, char** argv)
                 char* op = toHex(opcode, 2);
                 char* xb = toHex(xbpe, 1);
                 char* disp = toHex(addr, 3);
-
-                //printf("%d\n",object_cnt);
-
                 char temp[8];
                 strcpy(temp, "");
                 strcpy(temp, op);
@@ -1207,11 +991,6 @@ int main(int argc, char** argv)
     
 
     fprintf(F_object, "%06X\n", program_length);
-    
-    // for(int i=0;i<object_cnt;i++)
-    // {
-    //     printf("%4X \t  %s\n",arr_loc[i], object_code[i]);
-    // }
     
     int cnt=0;
     int First_addr = arr_loc[0];
