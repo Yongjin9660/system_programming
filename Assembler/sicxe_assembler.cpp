@@ -566,30 +566,6 @@ int main(int argc, char** argv)
                     fprintf(wfp, "%d\t%s\t%s\t%s\t%s\n", input[j].loc, input[j].symbol, input[j].opcode, input[j].operand, input[j].comment);
             }
         }
-        // for (int j = 1; j < line_count - 1; j++)
-        // {
-        //     if (input[j].comment == NULL)
-        //     {
-        //         if (strcmp(input[j].opcode, "BASE") == 0)
-        //             fprintf(wfp, "\t\t%s\t%s\n", input[j].opcode, input[j].operand);
-        //         else
-        //             fprintf(wfp, "%d\t%s\t%s\t%s\n", input[j].loc, input[j].symbol, input[j].opcode, input[j].operand);
-        //     }
-        //     else if(strlen(input[j].opcode) == 0 && input[j].comment != NULL)
-        //     {
-        //         //printf("Hello");
-        //         fprintf(wfp, "%s", input[j].comment);
-        //     }
-        //     else if(strlen(input[j].opcode) != 0 && input[j].comment != NULL)
-        //     {
-        //         //printf("Heelo\n");
-        //         //printf("%s\n",input[j].comment);
-        //         // if (strcmp(input[j].opcode, "BASE") == 0)
-        //         //     fprintf(wfp, "\t\t%s\t%s\t%s\n", input[j].opcode, input[j].operand, input[j].comment);
-        //         // else
-        //         //     fprintf(wfp, "%d\t%s\t%s\t%s\t%s\n", input[j].loc, input[j].symbol, input[j].opcode, input[j].operand, input[j].comment);
-        //     }
-        // }
         fprintf(wfp, "\t%s\t%s\t%s\n", input[line_count - 1].symbol, input[line_count - 1].opcode, input[line_count - 1].operand);
 
         clock_t t_end = clock();
@@ -663,10 +639,23 @@ int main(int argc, char** argv)
         char t2[10];
         char t3[10];
         char t4[10];
+        
+        char *comment;
+        bool hasComment = false;
 
         if(line[0] == '.'){
             fputs(line, fp_Assembly);
             continue;
+        }
+        else if (strstr(line, ".") != NULL)
+        {
+            hasComment = true;
+            char *temp = strchr(line, '.');
+            int dot_idx = (int)(temp - &line[0]);
+            comment = substring(line, dot_idx, (int)strlen(line) - 2);
+
+            char *temp_line = substring(line, 0, dot_idx - 1);
+            strcpy(line, temp_line);
         }
 
         tok_num = 0;
@@ -737,7 +726,11 @@ int main(int argc, char** argv)
 
         if(strcmp(t_opcode, "START") == 0)
         {
-            fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\n", t_loc, t_symbol, t_opcode, t_operand);
+            if(hasComment)
+                fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%s\n", t_loc, t_symbol, t_opcode, t_operand, comment);
+            else
+                fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\n", t_loc, t_symbol, t_opcode, t_operand);
+            
             // Header
             fprintf(F_object, "H%s", t_symbol);
             strcpy(program_name, t_symbol);
@@ -756,7 +749,10 @@ int main(int argc, char** argv)
         if(is_opcode2(t_opcode, &opcode) == true){
             if(format == 1)
             {
-                fprintf(fp_Assembly, "%.4X\t%s\t%s\t\t\t%.2X\n", t_loc, t_symbol, t_opcode, opcode);
+                if(!hasComment)
+                    fprintf(fp_Assembly, "%.4X\t%s\t%s\t\t\t%.2X\n", t_loc, t_symbol, t_opcode, opcode);
+                else
+                    fprintf(fp_Assembly, "%.4X\t%s\t%s\t\t\t%.2X\t%s\n", t_loc, t_symbol, t_opcode, opcode, comment);
                 program_length = t_loc + 1;
                 print = true;
             }
@@ -766,7 +762,10 @@ int main(int argc, char** argv)
                 char *test = toHex(4214,6);
                 if (strlen(t_operand) == 1)
                 {
-                    fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X0\n", t_loc, t_symbol, t_opcode, t_operand, opcode, getRegisterNum(t_operand[0]));
+                    if(!hasComment)
+                        fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X0\n", t_loc, t_symbol, t_opcode, t_operand, opcode, getRegisterNum(t_operand[0]));
+                    else
+                        fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X0\t%s\n", t_loc, t_symbol, t_opcode, t_operand, opcode, getRegisterNum(t_operand[0]), comment);
                     char* op = toHex(opcode, 2);
                     char* disp = toHex(getRegisterNum(t_operand[0]),1);
                     
@@ -780,7 +779,10 @@ int main(int argc, char** argv)
                 }
                 else
                 {
-                    fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X%X\n", t_loc, t_symbol, t_opcode, t_operand, opcode, getRegisterNum(t_operand[0]), getRegisterNum(t_operand[2]));
+                    if(!hasComment)
+                        fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X%X\n", t_loc, t_symbol, t_opcode, t_operand, opcode, getRegisterNum(t_operand[0]), getRegisterNum(t_operand[2]));
+                    else
+                        fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X%X\t%s\n", t_loc, t_symbol, t_opcode, t_operand, opcode, getRegisterNum(t_operand[0]), getRegisterNum(t_operand[2]), comment);
                     char* op = toHex(opcode, 2);
                     char* disp1 = toHex(getRegisterNum(t_operand[0]), 1);
                     char* disp2 = toHex(getRegisterNum(t_operand[2]), 1);
@@ -865,7 +867,10 @@ int main(int argc, char** argv)
                             strcpy(object_code[object_cnt], temp);
                             arr_loc[object_cnt] = t_loc;
                             object_cnt++;
-                            fprintf(fp_Assembly, "\n");
+                            if(!hasComment)
+                                fprintf(fp_Assembly, "%s\n", temp_addr);
+                            else
+                                fprintf(fp_Assembly, "%s\t%s\n", temp_addr, comment);
                             print = true;
                         }
                     }
@@ -887,7 +892,6 @@ int main(int argc, char** argv)
                             else if (addr < 0)
                             {
                                 opcode += 3;
-
                                 fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X", t_loc, t_symbol, t_opcode, t_operand, opcode, xbpe);
 
                                 char s[10];
@@ -899,8 +903,10 @@ int main(int argc, char** argv)
                                 char disp[3];
 
                                 char *temp_addr = substring(s, 5, strlen(s) - 1);
-
-                                fprintf(fp_Assembly, "%s\n", temp_addr);
+                                if(!hasComment)
+                                    fprintf(fp_Assembly, "%s\n", temp_addr);
+                                else
+                                    fprintf(fp_Assembly, "%s\t%s\n", temp_addr, comment);
                                 print = true;
                                 char temp[6];
                                 strcpy(temp, "");
@@ -967,7 +973,10 @@ int main(int argc, char** argv)
                 else
                     program_length = t_loc + (strlen(t_operand) / 2-3) + 1;
             }
-            fprintf(fp_Assembly, "\n");
+            if(!hasComment)
+                fprintf(fp_Assembly, "\n");
+            else
+                fprintf(fp_Assembly, "\t%s\n",comment);
             object_cnt++;
             print = true;
         }
@@ -987,15 +996,16 @@ int main(int argc, char** argv)
             continue;
         }
         
-
-
         if(!print)
         {
             opcode += ni;
             if(format == 4)
             {
                 xbpe = 1;
-                fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X%.5X\n", t_loc, t_symbol, t_opcode, t_operand, opcode, xbpe, addr);
+                if(!hasComment)
+                    fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X%.5X\n", t_loc, t_symbol, t_opcode, t_operand, opcode, xbpe, addr);
+                else
+                    fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X%.5X\t%s\n", t_loc, t_symbol, t_opcode, t_operand, opcode, xbpe, addr, comment);
                 //opcode, xbpe, addr
                 char *op = toHex(opcode, 2);
                 char *xb = toHex(xbpe, 1);
@@ -1017,10 +1027,14 @@ int main(int argc, char** argv)
             else
             {
                 if(strlen(t_operand) == 8)
-                    fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t%.2X%X%.3X\n", t_loc, t_symbol,t_opcode,t_operand, opcode, xbpe, addr);
+                    fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t%.2X%X%.3X", t_loc, t_symbol,t_opcode,t_operand, opcode, xbpe, addr);
                 else
-                    fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X%.3X\n", t_loc, t_symbol,t_opcode,t_operand, opcode, xbpe, addr);
-                
+                    fprintf(fp_Assembly, "%.4X\t%s\t%s\t%s\t\t%.2X%X%.3X", t_loc, t_symbol,t_opcode,t_operand, opcode, xbpe, addr);
+
+                if(!hasComment)
+                    fprintf(fp_Assembly, "\n");
+                else
+                    fprintf(fp_Assembly, "\t%s\n", comment);
                 char* op = toHex(opcode, 2);
                 char* xb = toHex(xbpe, 1);
                 char* disp = toHex(addr, 3);
@@ -1032,14 +1046,12 @@ int main(int argc, char** argv)
                 strcpy(object_code[object_cnt], temp);
                 arr_loc[object_cnt] = t_loc;
                 object_cnt++;
-               
             }
         }
     }
 
     fclose(fp_Assembly);
     
-
     fprintf(F_object, "%06X\n", program_length);
     
     int cnt=0;
