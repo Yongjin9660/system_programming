@@ -323,45 +323,56 @@ int main(int argc, char** argv)
     // Get each line until there are none left
     while (fgets(line, 50, r_file))
     {
-        if (strstr(line, ".") != NULL)
+        if(line[0] == '.')
         {
-            input[line_count].comment = (char *)malloc((int)strlen(line)+1);
-            memset(input[line_count].comment, 0, (int)strlen(line)+1);
+            input[line_count].comment = (char *)malloc((int)strlen(line) + 1);
+            memset(input[line_count].comment, 0, (int)strlen(line) + 1);
             strcpy(input[line_count].comment, line);
             line_count++;
+            continue;
+        }
+        else if (strstr(line, ".") != NULL)
+        {
+            char *temp = strchr(line, '.');
+            int dot_idx = (int)(temp - &line[0]);
+            char *comment = substring(line, dot_idx, (int)strlen(line) - 2);
+            input[line_count].comment = (char *)malloc((int)strlen(comment) + 1);
+            memset(input[line_count].comment, 0, (int)strlen(comment) + 1);
+            strcpy(input[line_count].comment, comment);
+
+            char *temp_line = substring(line, 0, dot_idx - 1);
+            strcpy(line, temp_line);
+        }
+
+        tok_num = 0;
+        token = strtok(line, delimit);
+
+        while (token != NULL)
+        {
+            tok_num++;
+            if (tok_num == 1)
+                strcpy(temp1, token);
+            else if (tok_num == 2)
+                strcpy(temp2, token);
+            else
+                strcpy(temp3, token);
+
+            token = strtok(NULL, delimit);
+        }
+        if (tok_num == 1)
+            strcpy(input[line_count].opcode, temp1);
+        else if (tok_num == 2)
+        {
+            strcpy(input[line_count].opcode, temp1);
+            strcpy(input[line_count].operand, temp2);
         }
         else
         {
-            tok_num = 0;
-            token = strtok(line, delimit);
-
-            while (token != NULL)
-            {
-                tok_num++;
-                if (tok_num == 1)
-                    strcpy(temp1, token);
-                else if (tok_num == 2)
-                    strcpy(temp2, token);
-                else
-                    strcpy(temp3, token);
-
-                token = strtok(NULL, delimit);
-            }
-            if (tok_num == 1)
-                strcpy(input[line_count].opcode, temp1);
-            else if (tok_num == 2)
-            {
-                strcpy(input[line_count].opcode, temp1);
-                strcpy(input[line_count].operand, temp2);
-            }
-            else
-            {
-                strcpy(input[line_count].symbol, temp1);
-                strcpy(input[line_count].opcode, temp2);
-                strcpy(input[line_count].operand, temp3);
-            }
-            line_count++;
+            strcpy(input[line_count].symbol, temp1);
+            strcpy(input[line_count].opcode, temp2);
+            strcpy(input[line_count].operand, temp3);
         }
+        line_count++;
     }
 
     int LOCCTR;
@@ -398,11 +409,12 @@ int main(int argc, char** argv)
 
     do
     {
-        if (input[i].comment != NULL)
+        if(input[i].comment != NULL && (int)strlen(input[i].opcode) == 0)
         {
             i++;
             continue;
         }
+
         bool chk_sym = true;
     
         if ((int)strlen(input[i].symbol) != 0)
@@ -498,8 +510,15 @@ int main(int argc, char** argv)
                 else
                     fprintf(wfp, "%d\t%s\t%s\t%s\n", input[j].loc, input[j].symbol, input[j].opcode, input[j].operand);
             }
-            else
+            else if(strlen(input[j].opcode) == 0)
                 fprintf(wfp, "%s", input[j].comment);
+            else
+            {
+                if (strcmp(input[j].opcode, "BASE") == 0)
+                    fprintf(wfp, "\t\t%s\t%s\t%s\n", input[j].opcode, input[j].operand, input[j].comment);
+                else
+                    fprintf(wfp, "%d\t%s\t%s\t%s\t%s\n", input[j].loc, input[j].symbol, input[j].opcode, input[j].operand, input[j].comment);
+            }
         }
         fprintf(wfp, "\t%s\t%s\t%s\n", input[line_count - 1].symbol, input[line_count - 1].opcode, input[line_count - 1].operand);
 
@@ -537,9 +556,40 @@ int main(int argc, char** argv)
                 else
                     fprintf(wfp, "%d\t%s\t%s\t%s\n", input[j].loc, input[j].symbol, input[j].opcode, input[j].operand);
             }
-            else
+            else if(strlen(input[j].opcode) == 0)
                 fprintf(wfp, "%s", input[j].comment);
+            else
+            {
+                if (strcmp(input[j].opcode, "BASE") == 0)
+                    fprintf(wfp, "\t\t%s\t%s\t%s\n", input[j].opcode, input[j].operand, input[j].comment);
+                else
+                    fprintf(wfp, "%d\t%s\t%s\t%s\t%s\n", input[j].loc, input[j].symbol, input[j].opcode, input[j].operand, input[j].comment);
+            }
         }
+        // for (int j = 1; j < line_count - 1; j++)
+        // {
+        //     if (input[j].comment == NULL)
+        //     {
+        //         if (strcmp(input[j].opcode, "BASE") == 0)
+        //             fprintf(wfp, "\t\t%s\t%s\n", input[j].opcode, input[j].operand);
+        //         else
+        //             fprintf(wfp, "%d\t%s\t%s\t%s\n", input[j].loc, input[j].symbol, input[j].opcode, input[j].operand);
+        //     }
+        //     else if(strlen(input[j].opcode) == 0 && input[j].comment != NULL)
+        //     {
+        //         //printf("Hello");
+        //         fprintf(wfp, "%s", input[j].comment);
+        //     }
+        //     else if(strlen(input[j].opcode) != 0 && input[j].comment != NULL)
+        //     {
+        //         //printf("Heelo\n");
+        //         //printf("%s\n",input[j].comment);
+        //         // if (strcmp(input[j].opcode, "BASE") == 0)
+        //         //     fprintf(wfp, "\t\t%s\t%s\t%s\n", input[j].opcode, input[j].operand, input[j].comment);
+        //         // else
+        //         //     fprintf(wfp, "%d\t%s\t%s\t%s\t%s\n", input[j].loc, input[j].symbol, input[j].opcode, input[j].operand, input[j].comment);
+        //     }
+        // }
         fprintf(wfp, "\t%s\t%s\t%s\n", input[line_count - 1].symbol, input[line_count - 1].opcode, input[line_count - 1].operand);
 
         clock_t t_end = clock();
