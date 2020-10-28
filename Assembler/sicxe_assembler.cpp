@@ -344,14 +344,15 @@ int main(int argc, char** argv)
             char *temp_line = substring(line, 0, dot_idx - 1);
             strcpy(line, temp_line);
         }
-        if(strlen(line) == 1)
+        tok_num = 0;
+        token = strtok(line, delimit);
+
+        if(token == NULL)
         {
             strcpy(input[line_count].opcode, " ");
             line_count++;
             continue;
         }
-        tok_num = 0;
-        token = strtok(line, delimit);
 
         while (token != NULL)
         {
@@ -687,6 +688,9 @@ int main(int argc, char** argv)
 
         tok_num = 0;
         token = strtok(line, delimit);
+
+        if(token == NULL)
+            break;
 
         int t_loc;
         char t_symbol[10];
