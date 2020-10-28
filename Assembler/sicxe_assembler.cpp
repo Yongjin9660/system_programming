@@ -320,6 +320,7 @@ int main(int argc, char** argv)
 	char temp1[10], temp2[10], temp3[10], temp4[10];
 	int tok_num;
 
+    
     // Get each line until there are none left
     while (fgets(line, 50, r_file))
     {
@@ -343,7 +344,12 @@ int main(int argc, char** argv)
             char *temp_line = substring(line, 0, dot_idx - 1);
             strcpy(line, temp_line);
         }
-
+        if(strlen(line) == 1)
+        {
+            strcpy(input[line_count].opcode, " ");
+            line_count++;
+            continue;
+        }
         tok_num = 0;
         token = strtok(line, delimit);
 
@@ -414,6 +420,11 @@ int main(int argc, char** argv)
             i++;
             continue;
         }
+        if(strcmp(input[i].opcode, " ") == 0)
+        {
+            i++;
+            continue;
+        }
 
         bool chk_sym = true;
     
@@ -446,7 +457,6 @@ int main(int argc, char** argv)
                 return EXIT_FAILURE;
             }
         }
-        
         input[i].loc = LOCCTR;
         
         if (is_opcode(input[i].opcode) == true)
@@ -481,6 +491,8 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
         }
         i++;
+        if(i == line_count)
+            break;
     } while (strcmp(input[i].opcode, "END") != 0);
 
     // write symbol table in Intermediate file
@@ -505,6 +517,11 @@ int main(int argc, char** argv)
         {
             if (input[j].comment == NULL)
             {
+                if (strcmp(input[j].opcode, " ") == 0)
+                {
+                    fprintf(wfp, "\n");
+                    continue;
+                }
                 if (strcmp(input[j].opcode, "BASE") == 0)
                     fprintf(wfp, "\t\t%s\t%s\n", input[j].opcode, input[j].operand);
                 else
@@ -551,6 +568,11 @@ int main(int argc, char** argv)
         {
             if (input[j].comment == NULL)
             {
+                if (strcmp(input[j].opcode, " ") == 0)
+                {
+                    fprintf(wfp, "\n");
+                    continue;
+                }
                 if (strcmp(input[j].opcode, "BASE") == 0)
                     fprintf(wfp, "\t\t%s\t%s\n", input[j].opcode, input[j].operand);
                 else
@@ -574,7 +596,6 @@ int main(int argc, char** argv)
 
     fclose(r_file);
     fclose(wfp);
-
     ////////////////////////////////////////
     //          Finish Pass1                
     ////////////////////////////////////////
@@ -643,6 +664,12 @@ int main(int argc, char** argv)
         char *comment;
         bool hasComment = false;
 
+        if(strlen(line) == 1)
+        {
+            fprintf(fp_Assembly, "\n");
+            continue;
+        }
+        
         if(line[0] == '.'){
             fputs(line, fp_Assembly);
             continue;
