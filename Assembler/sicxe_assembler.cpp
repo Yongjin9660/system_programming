@@ -279,6 +279,7 @@ void MakeOptable()
 }
 
 bool _UseHash = false;
+double t_total_search = 0;
 
 int main(int argc, char** argv)
 {
@@ -540,8 +541,6 @@ int main(int argc, char** argv)
         }
         fprintf(wfp, "\t%s\t%s\t%s\n", input[line_count - 1].symbol, input[line_count - 1].opcode, input[line_count - 1].operand);
 
-        clock_t t_end = clock();
-
         fputs("\n========= optable ============\n", wfp);
         fputs("index \tkey \topcode \tformat\n", wfp);
         for (int i = 0; i < OP_SIZE; i++)
@@ -551,7 +550,6 @@ int main(int argc, char** argv)
                 continue;
             fprintf(wfp, "%d \t%s \t%.2X \t%d\n", i, o->inst, o->opcode, o->format);
         }
-        fprintf(wfp, "\nEstimated Time(Using Hash Table) : %lf\n", (double)(t_end - t_start)/CLOCKS_PER_SEC);
     }
     else
     {
@@ -590,9 +588,6 @@ int main(int argc, char** argv)
             }
         }
         fprintf(wfp, "\t%s\t%s\t%s\n", input[line_count - 1].symbol, input[line_count - 1].opcode, input[line_count - 1].operand);
-
-        clock_t t_end = clock();
-        fprintf(wfp, "\nEstimated Time : %lf\n", (double)(t_end - t_start)/CLOCKS_PER_SEC);
     }
 
     fclose(r_file);
@@ -1137,6 +1132,19 @@ int main(int argc, char** argv)
     fprintf(F_object, "E%06X\n", First_addr);
 
     fclose(F_object);
+	clock_t t_end = clock();
+	if(_UseHash)
+	{
+		printf("Using Hash Table\n");
+		printf("Estimated Time : %lf\n", (double)(t_end - t_start)/CLOCKS_PER_SEC);
+		printf("SYMTAB search Time : %lf\n", t_total_search);
+	}
+	else
+	{
+		printf("Not Using Hash Table\n");
+		printf("Estimated Time : %lf\n", (double)(t_end - t_start)/CLOCKS_PER_SEC);
+		printf("SYMTAB search Time : %lf\n", t_total_search);
+	}	
 }
 
 bool is_opcode(char *str)
@@ -1275,6 +1283,7 @@ bool is_opcode2(char* str, int* opcode)
 
 bool findSymbol(char* input)
 {
+	clock_t t_start = clock();
     bool result = true;
     if(_UseHash == true)
     {
@@ -1295,33 +1304,46 @@ bool findSymbol(char* input)
             }
         }
     }
+	clock_t t_end = clock();
+	t_total_search += (double)(t_end - t_start)/CLOCKS_PER_SEC;
     return result;
 }
 bool findSymbol2(char* input, int *addr)
 {
+	clock_t t_start = clock();
     bool result = false;
     if(_UseHash == true)
     {
         SYMTAB *sym = get_SYM_2(input);
-        if(sym == NULL)
-            return false;
-        else
-        {
-            *addr = sym->value;
-            return true;
-        }
-    }
-    else
-    {
-        for(int i=0;i<sym_cnt;i++)
-        {
-            if(strcmp(input, symtab[i].name) == 0)
-            {
-                *addr = symtab[i].value;
-                return true;
-            }
-        }
-    }
+		if (sym == NULL)
+		{
+			clock_t t_end = clock();
+			t_total_search += (double)(t_end - t_start) / CLOCKS_PER_SEC;
+			return false;
+		}
+		else
+		{
+			clock_t t_end = clock();
+			t_total_search += (double)(t_end - t_start) / CLOCKS_PER_SEC;
+			*addr = sym->value;
+			return true;
+		}
+	}
+	else
+	{
+		for (int i = 0; i < sym_cnt; i++)
+		{
+			if (strcmp(input, symtab[i].name) == 0)
+			{
+				clock_t t_end = clock();
+				t_total_search += (double)(t_end - t_start) / CLOCKS_PER_SEC;
+				*addr = symtab[i].value;
+				return true;
+			}
+		}
+	}
+	clock_t t_end = clock();
+	t_total_search += (double)(t_end - t_start)/CLOCKS_PER_SEC;
     return false;
 }
 
